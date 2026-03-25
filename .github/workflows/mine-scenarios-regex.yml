@@ -25,6 +25,9 @@ jobs:
       - name: Install dependencies
         run: uv sync
       
+      - name: Create results directory
+        run: mkdir -p results
+      
       - name: Run scenario miner (regex only)
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}

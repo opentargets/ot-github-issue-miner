@@ -111,6 +111,9 @@ def csv_escape(value: str) -> str:
 
 def write_csv(filename: Path, headers: List[str], rows: List[List[str]]) -> None:
     """Write CSV file safely."""
+    # Ensure output directory exists
+    filename.parent.mkdir(parents=True, exist_ok=True)
+    
     output = StringIO()
     writer = csv.writer(output)
     writer.writerow(headers)
