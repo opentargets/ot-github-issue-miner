@@ -5,6 +5,11 @@ on:
     # Run every Sunday at midnight UTC
     - cron: '0 0 * * 0'
   workflow_dispatch:  # Manual trigger
+    inputs:
+      since_date:
+        description: "Start date in DD-MM-YYYY format (e.g., 20-02-2026). Leave empty for 3 months ago."
+        required: false
+        default: ""
 
 jobs:
   mine-scenarios:
@@ -31,7 +36,16 @@ jobs:
       - name: Run scenario miner (regex only)
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
-        run: .venv/bin/python -m ot_miner.cli --output-dir ./results --no-llm --verbose
+        run: |
+          # Get input date or use 3 months ago as default
+          INPUT_DATE="${{ github.event.inputs.since_date }}"
+          if [ -z "$INPUT_DATE" ]; then
+            # Default to 3 months ago in DD-MM-YYYY format
+            INPUT_DATE=$(date -u -d '90 days ago' +%d-%m-%Y)
+          fi
+          # Convert DD-MM-YYYY to YYYY-MM-DD for CLI
+          CONVERTED_DATE=$(echo "$INPUT_DATE" | awk -F'-' '{print $3"-"$2"-"$1}')
+          .venv/bin/python -m ot_miner.cli --output-dir ./results --no-llm --verbose --since-date "$CONVERTED_DATE"
       
       - name: Upload results as artifact
         if: always()

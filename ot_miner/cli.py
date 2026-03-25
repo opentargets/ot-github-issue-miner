@@ -73,6 +73,12 @@ def main():
         help="LLM batch size (default: 5)",
     )
     
+    parser.add_argument(
+        "--since-date",
+        type=str,
+        help="Only fetch issues created/updated after this date (ISO8601: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)",
+    )
+    
     args = parser.parse_args()
     
     # Load configuration
@@ -88,6 +94,13 @@ def main():
         logger.setLevel(logging.DEBUG)
     if args.batch_size:
         config.llm_batch_size = args.batch_size
+    if args.since_date:
+        try:
+            from datetime import datetime
+            config.since_date = datetime.fromisoformat(args.since_date.replace('Z', '+00:00'))
+        except ValueError as e:
+            logger.error(f"Invalid --since-date format: {args.since_date}. Use ISO8601 format: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS")
+            return 1
     
     try:
         # Run the miner

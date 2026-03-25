@@ -50,16 +50,23 @@ class GitHubLoader:
         
         logger.info("⬇  Fetching GitHub issues (open + closed)…")
         
+        params = {
+            "state": "all",
+            "per_page": 100,
+            "page": page,
+        }
+        
+        # Add date filter if specified
+        if self.config.since_date:
+            params["since"] = self.config.since_date.isoformat()
+            logger.info(f"   Filtering issues since: {self.config.since_date.isoformat()}")
+        
         while True:
             try:
                 response = requests.get(
                     self.base_url,
                     headers=self.headers,
-                    params={
-                        "state": "all",
-                        "per_page": 100,
-                        "page": page,
-                    },
+                    params=params,
                     timeout=10,
                 )
                 response.raise_for_status()
@@ -80,6 +87,7 @@ class GitHubLoader:
                 break
             
             page += 1
+            params["page"] = page
             time.sleep(0.25)  # Be respectful to API
         
         print()  # New line after progress

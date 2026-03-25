@@ -9,6 +9,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
+from datetime import datetime
 
 
 @dataclass
@@ -19,6 +20,7 @@ class Config:
     github_owner: str = "opentargets"
     github_repo: str = "issues"
     github_token: str = ""
+    since_date: Optional[datetime] = None
     
     # LLM settings
     anthropic_api_key: str = ""
@@ -38,10 +40,19 @@ class Config:
     @classmethod
     def from_env(cls) -> "Config":
         """Load configuration from environment variables."""
+        since_date_str = os.getenv("SINCE_DATE", "")
+        since_date = None
+        if since_date_str:
+            try:
+                since_date = datetime.fromisoformat(since_date_str.replace('Z', '+00:00'))
+            except ValueError as e:
+                raise ValueError(f"Invalid SINCE_DATE format: {since_date_str}. Use ISO8601 format: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS") from e
+        
         return cls(
             github_owner=os.getenv("GITHUB_OWNER", "opentargets"),
             github_repo=os.getenv("GITHUB_REPO", "issues"),
             github_token=os.getenv("GITHUB_TOKEN", ""),
+            since_date=since_date,
             anthropic_api_key=os.getenv("ANTHROPIC_API_KEY", ""),
             llm_model=os.getenv("LLM_MODEL", "claude-haiku-4-5"),
             llm_batch_size=int(os.getenv("LLM_BATCH_SIZE", "5")),
