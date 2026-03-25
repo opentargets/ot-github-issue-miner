@@ -27,7 +27,7 @@ jobs:
       
       - name: Run scenario miner (regex only)
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: .venv/bin/python -m ot_miner.cli --output-dir ./results --no-llm --verbose
       
       - name: Upload results as artifact
