@@ -1,6 +1,6 @@
 # Open Targets GitHub Issue Scenario Miner
 
-A production-grade Python package for mining GitHub issues from the [opentargets/issues](https://github.com/opentargets/issues) repository and extracting test scenarios in formats suitable for data analysis and Google Sheets import.
+A Python package for mining GitHub issues from the [opentargets/issues](https://github.com/opentargets/issues) repository and extracting test scenarios in formats suitable for the platform-test package in ot-ui-apps.
 
 ## Features
 
@@ -77,6 +77,76 @@ for mapping in mappings:
     print(f"  Drug: {mapping.drug_id}")
     print(f"  Target: {mapping.target_id}")
 ```
+
+## Run Locally
+
+1. **Set up your environment:**
+   ```bash
+   export ANTHROPIC_API_KEY='your-anthropic-api-key'
+   export GITHUB_TOKEN='your-github-pat'  # Optional but recommended
+   ```
+
+2. **Run the test script:**
+   ```bash
+   # Mine issues from last 7 days with LLM (default)
+   python test_llm_local.py
+
+   # Mine issues from last 30 days
+   python test_llm_local.py --days 30
+
+   # Mine issues from last 90 days (as used in testing)
+   python test_llm_local.py --days 90
+
+   # Save to custom directory with verbose output
+   python test_llm_local.py --days 14 --output-dir my-test --verbose
+   ```
+
+3. **Check results:**
+   Results are saved to `test-results/` (or your custom output directory):
+   - `mined-scenarios.csv` - CSV format
+   - `mined-scenarios.json` - JSON format
+
+
+
+### Local Testing 
+```bash
+python test_llm_local.py --days 7
+```
+- Uses **regex + LLM** (slower, costs API credits, smarter)
+- Reads issue body AND comments for better context
+- Infers IDs from gene/disease/drug names
+- Has OpenTargets GraphQL API access for real-time entity verification
+
+## What the LLM Sees
+
+The LLM now receives:
+1. **Issue title**
+2. **Issue body** (first 3000 chars)
+3. **Comments** (first 10 comments, 300 chars each)
+4. **OpenTargets GraphQL API access** (can query in real-time)
+
+This allows it to:
+- Find mentions in comments that regex missed
+- **Query the OpenTargets API** to verify gene/disease/drug IDs
+- Look up entities by name (e.g., "BRAF" → API query → ENSG00000157764)
+- Verify IDs are valid before returning them
+- Get accurate mappings instead of guessing
+
+## OpenTargets API Integration
+
+The LLM can make GraphQL queries like:
+```graphql
+query { 
+  search(queryString:"BRAF", entityNames:["target"]) { 
+    hits { id name } 
+  } 
+}
+```
+
+This ensures all returned IDs are:
+- **Verified** - Checked against the live OpenTargets database
+- **Accurate** - No guessing or incorrect mappings
+- **Current** - Uses latest data from OpenTargets platform
 
 ## Configuration
 

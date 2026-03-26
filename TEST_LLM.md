@@ -30,19 +30,9 @@ This guide explains how to test the LLM-powered scenario mining locally before r
    - `mined-scenarios.csv` - CSV format
    - `mined-scenarios.json` - JSON format
 
-## What's Different from Production?
 
-### Production (GitHub Action - Regex Only)
-```bash
-.venv/bin/python -m ot_miner.cli --output-dir ./results --no-llm --verbose --since-date "YYYY-MM-DD"
-```
-- Uses **regex only** (fast, free, no API calls)
-- Runs weekly on Sundays at midnight UTC
-- Defaults to 3 months of issues (90 days ago)
-- Manual trigger allows custom date ranges
-- Good for basic ID extraction (explicit CHEMBL, ENSG, EFO IDs)
 
-### Local Testing (LLM Enabled)
+### Local Testing 
 ```bash
 python test_llm_local.py --days 7
 ```
