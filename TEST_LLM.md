@@ -12,11 +12,14 @@ This guide explains how to test the LLM-powered scenario mining locally before r
 
 2. **Run the test script:**
    ```bash
-   # Mine issues from last 7 days with LLM
+   # Mine issues from last 7 days with LLM (default)
    python test_llm_local.py
 
    # Mine issues from last 30 days
    python test_llm_local.py --days 30
+
+   # Mine issues from last 90 days (as used in testing)
+   python test_llm_local.py --days 90
 
    # Save to custom directory with verbose output
    python test_llm_local.py --days 14 --output-dir my-test --verbose
@@ -31,10 +34,12 @@ This guide explains how to test the LLM-powered scenario mining locally before r
 
 ### Production (GitHub Action - Regex Only)
 ```bash
-.venv/bin/python -m ot_miner.cli --output-dir ./results --no-llm --verbose
+.venv/bin/python -m ot_miner.cli --output-dir ./results --no-llm --verbose --since-date "YYYY-MM-DD"
 ```
 - Uses **regex only** (fast, free, no API calls)
-- Runs weekly on all issues from last 3 months
+- Runs weekly on Sundays at midnight UTC
+- Defaults to 3 months of issues (90 days ago)
+- Manual trigger allows custom date ranges
 - Good for basic ID extraction (explicit CHEMBL, ENSG, EFO IDs)
 
 ### Local Testing (LLM Enabled)
@@ -44,7 +49,7 @@ python test_llm_local.py --days 7
 - Uses **regex + LLM** (slower, costs API credits, smarter)
 - Reads issue body AND comments for better context
 - Infers IDs from gene/disease/drug names
-- Can use OpenTargets MCP tools for lookups (when configured)
+- Has OpenTargets GraphQL API access for real-time entity verification
 
 ## What the LLM Sees
 
@@ -90,23 +95,40 @@ The test script helps you validate on a small subset before running on the full 
 
 ```
 🚀 Running scenario miner with LLM
-📅 Mining issues since: 2026-03-18 (7 days ago)
+📅 Mining issues since: 2025-12-26 (90 days ago)
 📂 Output directory: ./test-results
 🤖 LLM model: claude-3-5-sonnet-20241022
 
+💻 Running: .venv/bin/python -m ot_miner.cli --output-dir ./test-results --since-date 2025-12-26
+
+🚀 Open Targets scenario miner  [mode: regex + LLM]
+
 ⬇  Fetching GitHub issues (open + closed)…
+   Filtering issues since: 2025-12-26T00:00:00
    142 issues fetched…
 ✅ 142 issues fetched
 
-🔍 Regex extraction (Pass 1)…
-✅ 127 scenarios extracted
+🔎 Pass 1: regex extraction…
+   35 relevant issues out of 142 total
 
-🤖 LLM enrichment pass on 127 issues in batches of 5…
-   127/127 enriched…
+🤖 LLM enrichment pass on 35 issues in batches of 5…
+   Batch 1/7: Processing 5 issues…
+   Batch 2/7: Processing 5 issues…
+   ...
+   Batch 7/7: Processing 5 issues…
 ✅ LLM enrichment complete
 
-📝 Writing results…
+📝 Writing outputs…
+   Writing results/mined-scenarios.csv…
+   Writing results/mined-scenarios.json…
 ✅ Results written to test-results/
+
+📊 Summary:
+   35 total scenarios
+   12 with LLM enrichment
+
+✅ Mining complete!
+📁 Results saved to: ./test-results/
 ```
 
 ## Troubleshooting
@@ -123,10 +145,24 @@ The test script helps you validate on a small subset before running on the full 
 - May indicate rate limiting or network issues
 - Use GITHUB_TOKEN for higher rate limits
 
+## GitHub Action Manual Trigger
+
+The production workflow (regex-only) can be triggered manually with a custom date:
+
+1. Go to **Actions** tab in GitHub
+2. Select **"Open Targets Scenario Miner (Regex Only)"**
+3. Click **"Run workflow"**
+4. Enter a start date in `YYYY-MM-DD` format (e.g., `2026-02-20`)
+5. Leave empty to use the default (90 days ago)
+
+**Note:** The production workflow uses regex only (`--no-llm`) to keep costs at zero. For LLM-enriched results, use the local test script.
+
 ## Next Steps
 
-Once testing looks good:
+Once local testing looks good:
 1. Push changes to GitHub
-2. Enable LLM in workflow by removing `--no-llm` flag
-3. Add `ANTHROPIC_API_KEY` to GitHub Secrets
-4. Workflow will run weekly with LLM enabled
+2. Production workflow runs weekly (regex only, no cost)
+3. For LLM-enabled production:
+   - Remove `--no-llm` flag from `.github/workflows/mine-scenarios-regex.yml`
+   - Add `ANTHROPIC_API_KEY` to GitHub repository secrets
+   - Workflow will run weekly with LLM enrichment (~$2-5 per run)

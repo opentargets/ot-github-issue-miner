@@ -1,4 +1,4 @@
-name: Open Targets Scenario Miner (Regex Only)
+name: Open Targets Scenario Miner (Regex + LLM)
 
 on:
   schedule:
@@ -6,10 +6,11 @@ on:
     - cron: '0 0 * * 0'
   workflow_dispatch:  # Manual trigger
     inputs:
-      since_date:
-        description: "Start date in DD-MM-YYYY format (e.g., 20-02-2026). Leave empty for 3 months ago."
+      days:
+        description: "Number of days back to mine (e.g., 7, 30, 90). Leave empty for 90 days."
         required: false
-        default: ""
+        default: "90"
+        type: number
 
 jobs:
   mine-scenarios:
@@ -33,19 +34,17 @@ jobs:
       - name: Create results directory
         run: mkdir -p results
       
-      - name: Run scenario miner (regex only)
+      - name: Run scenario miner (regex + LLM)
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          # Get input date or use 3 months ago as default
-          INPUT_DATE="${{ github.event.inputs.since_date }}"
-          if [ -z "$INPUT_DATE" ]; then
-            # Default to 3 months ago in DD-MM-YYYY format
-            INPUT_DATE=$(date -u -d '90 days ago' +%d-%m-%Y)
+          # Get days input or use 90 as default
+          DAYS="${{ github.event.inputs.days }}"
+          if [ -z "$DAYS" ]; then
+            DAYS=90
           fi
-          # Convert DD-MM-YYYY to YYYY-MM-DD for CLI
-          CONVERTED_DATE=$(echo "$INPUT_DATE" | awk -F'-' '{print $3"-"$2"-"$1}')
-          .venv/bin/python -m ot_miner.cli --output-dir ./results --no-llm --verbose --since-date "$CONVERTED_DATE"
+          python test_llm_local.py --days "$DAYS" --output-dir ./results --verbose
       
       - name: Upload results as artifact
         if: always()
