@@ -17,8 +17,8 @@ A detailed guide to the Open Targets Scenario Miner's design, components, and ex
    │Config  │  │Loader  │  │ExtPass1│  │ExtPass2│   │Writers │
    │        │  │        │  │(Regex) │  │(LLM)   │   │        │
    │- Env   │  │-GitHub │  │- Patterns  │- Claude│   │- CSV   │
-   │- Paths │  │- Auth  │  │- Knowledge │- Batch │   │- JSON  │
-   │- LLM   │  │- Pagina│  │- Inference │- Merge │   │- JSONL │
+   │- Paths │  │- Auth  │  │-           │- Batch │   │- JSON  │
+   │- LLM   │  │- Pagina│  │-           │- Merge │   │        │
    └────────┘  └────────┘  └────────┘  └────────┘   └────────┘
 ```
 
