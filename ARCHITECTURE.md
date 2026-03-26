@@ -4,22 +4,14 @@ A detailed guide to the Open Targets Scenario Miner's design, components, and ex
 
 ## High-Level Design
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    ScenarioMiner (Orchestrator)                │
-│  Coordinates: GitHub Loader → Extractors → Writers             │
-└──────────────────┬──────────────────────────────────────────────┘
-                   │
-        ┌──────────┼──────────┬────────────┬──────────────┐
-        │          │          │            │              │
-        ▼          ▼          ▼            ▼              ▼
-   ┌────────┐  ┌────────┐  ┌────────┐  ┌────────┐   ┌────────┐
-   │Config  │  │Loader  │  │ExtPass1│  │ExtPass2│   │Writers │
-   │        │  │        │  │(Regex) │  │(LLM)   │   │        │
-   │- Env   │  │-GitHub │  │- Patterns  │- Claude│   │- CSV   │
-   │- Paths │  │- Auth  │  │-           │- Batch │   │- JSON  │
-   │- LLM   │  │- Pagina│  │-           │- Merge │   │        │
-   └────────┘  └────────┘  └────────┘  └────────┘   └────────┘
+```mermaid
+flowchart TD
+    SM["ScenarioMiner (Orchestrator)\nCoordinates: GitHub Loader → Extractors → Writers"]
+    SM --> C["Config\n- Env\n- Paths\n- LLM"]
+    SM --> L["Loader\n- GitHub\n- Auth\n- Pagination"]
+    SM --> E1["ExtPass1 (Regex)\n- Patterns\n- Filter\n- Entities"]
+    SM --> E2["ExtPass2 (LLM)\n- Claude\n- Batch\n- Merge"]
+    SM --> W["Writers\n- CSV\n- JSON"]
 ```
 
 ## Component Hierarchy
@@ -190,64 +182,18 @@ class ScenarioMiner:
 
 ### Complete Mining Pipeline
 
-```
-┌─────────────────────┐
-│ GitHub API Stream   │
-│ opentargets/issues  │
-└──────────┬──────────┘
-           │ (paginated, 100/page)
-           ▼
-┌──────────────────────────┐
-│ GitHubLoader             │
-│ - Handles pagination     │
-│ - Rate limiting (250ms)  │
-│ - Returns 500+ issues    │
-└──────────┬───────────────┘
-           │ List[GitHubIssue]
-           ▼
-┌──────────────────────────────┐
-│ RegexExtractor (Pass 1)      │
-│ - For each issue:            │
-│   1. Filter by relevance     │
-│   2. Match 9 regex patterns  │
-│   3. Extract entities        │
-│ - Returns ~200 mappings      │
-└──────────┬───────────────────┘
-           │ List[ScenarioMapping | None]
-           ▼
-       ┌───┴─────────────────┐
-       │                     │
-    [Regex Only Mode]   [Regex + LLM Mode]
-       │                     │
-       ▼                     ▼
-    End             ┌──────────────────────┐
-                    │ GroupBy: 5 issues    │
-                    │ (LLM batch size)     │
-                    └──────────┬───────────┘
-                               │ Batch[ScenarioMapping]
-                               ▼
-                    ┌──────────────────────────┐
-                    │ LLMExtractor (Pass 2)    │
-                    │ - Call Claude API        │
-                    │ - Parse response JSON    │
-                    │ - Merge with regex base  │
-                    │ - Respect rate limits    │
-                    └──────────┬───────────────┘
-                               │ Enriched List[ScenarioMapping]
-                               ▼
-            ┌──────────────────────────────────┐
-            │ MultiWriter                      │
-            ├──────────────────────────────────┤
-            │ ├─ CSVWriter → .csv             │
-            │ ├─ JSONWriter → .json           │
-            │ └─ (extensible)                 │
-            └──────────┬───────────────────────┘
-                       │
-         ┌─────────────┼─────────────┐
-         ▼             ▼             ▼
-    [.csv]         [.json]      [???]
-    
-    Ready for Google Sheets import!
+```mermaid
+flowchart TD
+    A["GitHub API Stream\nopentargets/issues"]
+    A -->|"paginated, 100/page"| B["GitHubLoader\n- Handles pagination\n- Rate limiting (250ms)\n- Returns 500+ issues"]
+    B -->|"List[GitHubIssue]"| C["RegexExtractor (Pass 1)\n- For each issue:\n  1. Filter by relevance\n  2. Match 9 regex patterns\n  3. Extract entities\n- Returns ~200 mappings"]
+    C -->|"List[ScenarioMapping | None]"| D{Mode?}
+    D -->|"Regex Only Mode"| E["End"]
+    D -->|"Regex + LLM Mode"| F["GroupBy: 5 issues\n(LLM batch size)"]
+    F -->|"Batch[ScenarioMapping]"| G["LLMExtractor (Pass 2)\n- Call Claude API\n- Parse response JSON\n- Merge with regex base\n- Respect rate limits"]
+    G -->|"Enriched List[ScenarioMapping]"| H["MultiWriter\n├─ CSVWriter → .csv\n├─ JSONWriter → .json\n└─ (extensible)"]
+    H --> I[".csv\nReady for Google Sheets import!"]
+    H --> J[".json"]
 ```
 
 ## Extension Points
