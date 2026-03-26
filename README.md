@@ -296,7 +296,7 @@ Apache License 2.0 - see LICENSE file for details
 If you use this tool in your research, please cite:
 
 ```bibtex
-@software{opentargets_issue_miner_2024,
+@software{opentargets_issue_miner_2026,
   title={Open Targets GitHub Issue Scenario Miner},
   author={Open Targets},
   year={2026},
