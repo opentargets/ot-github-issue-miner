@@ -33,6 +33,7 @@ class GitHubLoader:
         """
         self.config = config
         self.base_url = f"https://api.github.com/repos/{config.github_owner}/{config.github_repo}/issues"
+        self.comments_url = f"https://api.github.com/repos/{config.github_owner}/{config.github_repo}/issues"
         self.headers = config.get_github_headers()
     
     def fetch_all_issues(self) -> List[GitHubIssue]:
@@ -78,7 +79,12 @@ class GitHubLoader:
             if not batch:
                 break
             
-            issues.extend([GitHubIssue.from_api_response(item) for item in batch])
+            # Fetch issues with comments
+            for item in batch:
+                comments = self._fetch_issue_comments(item["number"])
+                issue = GitHubIssue.from_api_response(item, comments)
+                issues.append(issue)
+            
             print(f"\r   {len(issues)} issues fetched…", end="", flush=True)
             
             # Check for next page in Link header
@@ -93,6 +99,31 @@ class GitHubLoader:
         print()  # New line after progress
         logger.info(f"✅ {len(issues)} issues fetched")
         return issues
+    
+    def _fetch_issue_comments(self, issue_number: int) -> List[dict]:
+        """
+        Fetch all comments for a specific issue.
+        
+        Args:
+            issue_number: GitHub issue number
+        
+        Returns:
+            List of comment dictionaries from GitHub API
+        """
+        comments_url = f"{self.comments_url}/{issue_number}/comments"
+        
+        try:
+            response = requests.get(
+                comments_url,
+                headers=self.headers,
+                params={"per_page": 100},  # Most issues have < 100 comments
+                timeout=10,
+            )
+            response.raise_for_status()
+            return response.json()
+        except requests.RequestException as e:
+            logger.warning(f"Failed to fetch comments for issue #{issue_number}: {e}")
+            return []
 
 
 class IssueFilter:

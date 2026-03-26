@@ -40,7 +40,8 @@ This document provides architectural details and development patterns for the Op
 
 #### `extractors/regex.py`
 - `RegexExtractor`: Fast pattern-based extraction (Pass 1)
-- `AdaptiveRegexExtractor`: Enhanced regex with knowledge base inference
+  - Filters relevant issues
+  - Extracts explicit IDs only (no inference)
 
 #### `extractors/llm.py`
 - `LLMExtractor`: Claude API-based enrichment (Pass 2)
@@ -66,7 +67,9 @@ This document provides architectural details and development patterns for the Op
 
 ## Extraction Pipeline
 
-### Pass 1: Regex Extraction
+### Pass 1: Regex Extraction (Filtering + Explicit IDs)
+
+**Purpose**: Filter relevant issues and extract only explicit identifiers
 
 ```python
 # Input: GitHubIssue
@@ -79,17 +82,18 @@ This document provides architectural details and development patterns for the Op
    - Variant calls
    - Study IDs (GWAS, QTL)
    - Credible set hashes
-3. Extract inferred identifiers (if using AdaptiveRegexExtractor):
-   - Gene symbol → Ensembl ID lookup
-   - Disease name → EFO/MONDO lookup
-# Output: ScenarioMapping (or None if not relevant)
+# Output: ScenarioMapping with only explicit IDs (or None if not relevant)
 ```
+
+**Key characteristic**: No inference - only extracts what's directly present in text
 
 **Performance**: O(n) where n = number of issues, ~1-2 seconds for 100+ issues
 
 **Cost**: Free (no API calls)
 
-### Pass 2: LLM Enrichment
+### Pass 2: LLM Enrichment (Inference + Context)
+
+**Purpose**: Enrich mappings with inferred entities and context-aware extraction
 
 ```python
 # Input: ScenarioMapping from Pass 1 + original GitHubIssue
@@ -106,6 +110,8 @@ This document provides architectural details and development patterns for the Op
 6. Respect rate limits between batches
 # Output: Enriched ScenarioMapping
 ```
+
+**Key characteristic**: Handles all inference (gene names → Ensembl IDs, disease names → EFO/MONDO, etc.)
 
 **Performance**: ~5-15 seconds per batch of 5 issues (depends on API latency)
 
@@ -369,35 +375,13 @@ Reduce batch size:
 export LLM_BATCH_SIZE=3
 ```
 
-## Testing Guidelines
 
-Test coverage should include:
 
-- [ ] Regex pattern matching accuracy
-- [ ] GitHub loader pagination
-- [ ] Issue filtering logic
-- [ ] ScenarioMapping serialization
-- [ ] CSV/JSON output formatting
-- [ ] LLM response parsing
-- [ ] Error handling and graceful fallbacks
-- [ ] Rate-limit behavior
-
-```bash
-# Run all tests
-pytest
-
-# Run with coverage
-pytest --cov=ot_miner --cov-report=html
-
-# Run specific test file
-pytest tests/test_extractors.py -v
-```
 
 ## Release Checklist
 
 - [ ] Update version in setup.py and __init__.py
 - [ ] Update CHANGELOG.md
-- [ ] Run full test suite
 - [ ] Update documentation
 - [ ] Tag release in git
 - [ ] Build distribution packages

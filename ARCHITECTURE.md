@@ -122,18 +122,14 @@ class BaseExtractor (abstract):
 ##### regex.py: Fast Extraction
 ```python
 class RegexExtractor(BaseExtractor):
-  - Simple pattern matching
-  - Relevance filtering
+  - Simple pattern matching for explicit IDs
+  - Relevance filtering (labels + keywords)
+  - No inference - only extracts what's present
   - Returns confidence ~0.7
-
-class AdaptiveRegexExtractor(RegexExtractor):
-  - Extends with knowledge base lookups
-  - Infers ENSG IDs from gene names
-  - Infers EFO/MONDO from disease names
-  - Better coverage without API calls
 ```
 
 **Performance:** O(n) time, O(1) memory per issue
+**Purpose:** Filter relevant issues and extract explicit identifiers only
 
 ##### llm.py: Smart Enrichment
 ```python
@@ -149,11 +145,6 @@ Methods:
   - _process_batch(): Single LLM API call
 ```
 
-**Why LLM?**
-- Understands context ("BRAF target" → gene ID)
-- Handles ambiguities (variant classification)
-- Fills gaps regex misses (~20-30% improvement)
-- Cost-effective at batch processing
 
 #### 6. **writers/** - Output Formatting
 
@@ -164,7 +155,6 @@ class BaseWriter (abstract):
 Implementations:
 - CSVWriter: Google Sheets compatible (quoted, escaped)
 - JSONWriter: Pretty-printed with indentation
-- JSONLWriter: Streaming format (one object per line)
 - MultiWriter: Orchestrates multiple writers
 ```
 
@@ -255,7 +245,7 @@ class ScenarioMiner:
                        │
          ┌─────────────┼─────────────┐
          ▼             ▼             ▼
-    [.csv]         [.json]      [.jsonl]
+    [.csv]         [.json]      [???]
     
     Ready for Google Sheets import!
 ```

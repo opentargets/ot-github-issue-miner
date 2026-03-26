@@ -34,7 +34,6 @@ from ot_miner.models import (
 from ot_miner.extractors import (
     BaseExtractor,
     RegexExtractor,
-    AdaptiveRegexExtractor,
     LLMExtractor,
 )
 from ot_miner.loaders import GitHubLoader, IssueFilter
@@ -63,7 +62,6 @@ __all__ = [
     # Extractors
     "BaseExtractor",
     "RegexExtractor",
-    "AdaptiveRegexExtractor",
     "LLMExtractor",
     
     # Loaders

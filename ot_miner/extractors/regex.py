@@ -75,7 +75,7 @@ class RegexExtractor(BaseExtractor):
         
         # Check for bug-related labels
         is_bug_label = any(
-            label.name in ["bug", "frontend", "platform", "aotf"]
+            label.name in ["bug", "frontend", "platform", "aotf", "api"]
             for label in issue.labels
         )
         
@@ -128,41 +128,3 @@ class RegexExtractor(BaseExtractor):
                 ))
         
         return results
-
-
-class AdaptiveRegexExtractor(RegexExtractor):
-    """
-    Extended regex extractor with knowledge base lookups.
-    
-    Extends RegexExtractor with the ability to infer standard IDs
-    from common gene and disease names, improving coverage without
-    requiring external API calls.
-    """
-    
-    def extract(self, issue: GitHubIssue) -> Optional[ScenarioMapping]:
-        """Extract with inferred IDs from knowledge bases."""
-        mapping = super().extract(issue)
-        
-        if not mapping:
-            return None
-        
-        # Infer Ensembl IDs from gene names
-        if not mapping.target_id:
-            genes = extract_gene_symbols(f"{issue.title} {issue.body or ''}")
-            for gene in genes[:1]:  # Try first gene symbol
-                if gene_id := GENE_TO_ENSEMBL.get(gene.upper()):
-                    mapping.target_id = gene_id
-                    break
-        
-        # Infer disease IDs from disease names
-        if not mapping.disease_id:
-            diseases = find_all(
-                f"{issue.title} {issue.body or ''}",
-                REGEX_PATTERNS["disease"]
-            )
-            for disease in diseases[:1]:
-                if disease_id := DISEASE_TO_ONTOLOGY.get(disease.lower()):
-                    mapping.disease_id = disease_id
-                    break
-        
-        return mapping

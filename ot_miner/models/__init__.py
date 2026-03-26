@@ -26,6 +26,14 @@ class GitHubLabel:
 
 
 @dataclass
+class GitHubComment:
+    """Represents a GitHub issue comment."""
+    body: str
+    user: str
+    created_at: str
+
+
+@dataclass
 class GitHubIssue:
     """Represents a GitHub issue with relevant metadata."""
     number: int
@@ -34,10 +42,27 @@ class GitHubIssue:
     state: IssueState
     labels: List[GitHubLabel]
     html_url: str
+    comments: List[GitHubComment] = field(default_factory=list)
 
     @classmethod
-    def from_api_response(cls, data: dict) -> "GitHubIssue":
-        """Create GitHubIssue from GitHub API response."""
+    def from_api_response(cls, data: dict, comments: Optional[List[dict]] = None) -> "GitHubIssue":
+        """Create GitHubIssue from GitHub API response.
+        
+        Args:
+            data: GitHub API issue response
+            comments: Optional list of comment responses from GitHub API
+        """
+        issue_comments = []
+        if comments:
+            issue_comments = [
+                GitHubComment(
+                    body=c.get("body", ""),
+                    user=c.get("user", {}).get("login", "unknown"),
+                    created_at=c.get("created_at", ""),
+                )
+                for c in comments
+            ]
+        
         return cls(
             number=data["number"],
             title=data["title"],
@@ -45,6 +70,7 @@ class GitHubIssue:
             state=IssueState(data["state"]),
             labels=[GitHubLabel(l["name"]) for l in data.get("labels", [])],
             html_url=data["html_url"],
+            comments=issue_comments,
         )
 
 
@@ -150,6 +176,7 @@ from ot_miner.models.llm_models import ScenarioEntity
 __all__ = [
     "IssueState",
     "GitHubLabel",
+    "GitHubComment",
     "GitHubIssue",
     "ScenarioMapping",
     "ExtractionResult",

@@ -13,7 +13,6 @@ from ot_miner.models import GitHubIssue, ScenarioMapping
 from ot_miner.loaders import GitHubLoader, IssueFilter
 from ot_miner.extractors import (
     RegexExtractor,
-    AdaptiveRegexExtractor,
     LLMExtractor,
 )
 from ot_miner.writers import create_default_writers, MultiWriter
@@ -80,6 +79,9 @@ class ScenarioMiner:
         else:
             final_mappings = [m for m in regex_mappings if m is not None]
         
+        # Step 3.5: Filter out issues without any page IDs
+        final_mappings = self._filter_empty_mappings(final_mappings)
+        
         # Step 4: Write outputs
         self._write_outputs(final_mappings)
         
@@ -100,7 +102,7 @@ class ScenarioMiner:
         """
         logger.info("🔎 Pass 1: regex extraction…")
         
-        extractor = AdaptiveRegexExtractor(filter_issues=True)
+        extractor = RegexExtractor(filter_issues=True)
         mappings = []
         
         for issue in issues:
@@ -156,6 +158,55 @@ class ScenarioMiner:
         except ValueError as e:
             logger.error(f"⚠  LLM extraction skipped: {e}")
             return [m for m in regex_mappings if m is not None]
+    
+    def _filter_empty_mappings(self, mappings: List[ScenarioMapping]) -> List[ScenarioMapping]:
+        """
+        Filter out scenarios that don't have any page IDs.
+        
+        A scenario is considered valid if it has at least one of:
+        - drug_id (CHEMBL)
+        - variant_id (main variant)
+        - variant_pgx (PGx variant)
+        - variant_molqtl (molQTL variant)
+        - target_id (single Ensembl ID)
+        - target_ids (multiple Ensembl IDs)
+        - disease_id (EFO/MONDO)
+        - gwas_study
+        - qtl_study
+        - credible_set_l2g
+        - credible_set_gwas
+        - credible_set_qtl
+        
+        Args:
+            mappings: List of ScenarioMapping objects
+        
+        Returns:
+            Filtered list with only scenarios that have at least one page ID
+        """
+        filtered = []
+        for mapping in mappings:
+            has_page_id = any([
+                mapping.drug_id.strip(),
+                mapping.variant_id.strip(),
+                mapping.variant_pgx.strip(),
+                mapping.variant_molqtl.strip(),
+                mapping.target_id.strip(),
+                mapping.target_ids.strip(),
+                mapping.disease_id.strip(),
+                mapping.gwas_study.strip(),
+                mapping.qtl_study.strip(),
+                mapping.credible_set_l2g.strip(),
+                mapping.credible_set_gwas.strip(),
+                mapping.credible_set_qtl.strip(),
+            ])
+            if has_page_id:
+                filtered.append(mapping)
+        
+        excluded = len(mappings) - len(filtered)
+        if excluded > 0:
+            logger.info(f"🗑️  Excluded {excluded} issue(s) without any page IDs\n")
+        
+        return filtered
     
     def _write_outputs(self, mappings: List[ScenarioMapping]) -> None:
         """

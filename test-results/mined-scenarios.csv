@@ -1,0 +1,44 @@
+Testing Scenario,drug page test,variant page test,variant with pharmacogenetics,Variant with molqtl,Target page test,Target page partial,Target page List of AOTF disease,Disease page test,AOTF test for a list of genes for disease column,Disease to search from home page,disease page test alternatives,GWAS study test page,Mol Qtl study test page,Credible Set Page with L2G coloc,Credible set page with GWAS coloc,Credible Set Page with QTL coloc,Source (GitHub issue)
+gh#4319 Widget loading on associations page,,,,,,,Hypercholesterolemia,HP_0003124,PCSK9,hypercholesterolemia,"EFO_0004911,MONDO_0011369",,,,,,https://github.com/opentargets/issues/issues/4319
+gh#4310 API query examples for novelty scores,,,,,ENSG00000095002,,colorectal neoplasm,EFO_0004142,MSH2,colorectal neoplasm,MONDO_0005575,,,,,,https://github.com/opentargets/issues/issues/4310
+gh#4305 INN reports drug/disease pair aggregation,"CHEMBL5314968,CHEMBL4297489",,,,,,neoplasm,EFO_0000616,,neoplasm,,,,,,,https://github.com/opentargets/issues/issues/4305
+gh#4303 Disease bibliography loading issue,,,,,,,Alzheimer disease,MONDO_0004975,,Alzheimer disease,,,,,,,https://github.com/opentargets/issues/issues/4303
+"gh#4298 Ontology ID format search (MONDO:0002429, EFO)",,,,,,,,MONDO_0002429,,idiopathic interstitial pneumonia,,,,,,,https://github.com/opentargets/issues/issues/4298
+gh#4293 Variant to gene assignment in ClinVar variant 12_120291837_T_C,,12_120291837_T_C,,,,"ENSG00000202538,ENSG00000310566,ENSG00000089163",,MONDO_0971172,"RNU4-2,ENSG00000310566,SIRT4","neurodevelopmental disorder with hypotonia, brain anomalies, distinctive facies, and absent language",,,,,,,https://github.com/opentargets/issues/issues/4293
+gh#4292 Optimise fetching literature from clickhouse,,,,,,,Alzheimer disease,MONDO_0004975,,Alzheimer disease,,,,,,,https://github.com/opentargets/issues/issues/4292
+gh#4286 Sildenafil is withdrawn for erectile dysfunction,CHEMBL192,,,,,,erectile dysfunction,EFO_0004234,,erectile dysfunction,,,,,,,https://github.com/opentargets/issues/issues/4286
+gh#4282,CHEMBL363614,,,,,,,,,,,,,,,,https://github.com/opentargets/issues/issues/4282
+gh#4268 Disease drugAndClinicalCandidates endpoint,,,,,,,,EFO_0000616,,neoplasm,,,,,,,https://github.com/opentargets/issues/issues/4268
+gh#4266 Load clinical_target dataset schema,CHEMBL428647,,,,"ENSG00000149295,ENSG00000258947","ENSG00000149295,ENSG00000258947",,,"DRD2,TUBB3",,,,,,,,https://github.com/opentargets/issues/issues/4266
+gh#4265 Load clinical_indication dataset schema,CHEMBL1431,,,,,,,MONDO_0005148,,type 2 diabetes mellitus,,,,,,,https://github.com/opentargets/issues/issues/4265
+gh#4263 Link pharmacogenetics variants to platform,CHEMBL192,,,,,,,,,,,,,,,,https://github.com/opentargets/issues/issues/4263
+gh#4261 Trans join between target genes and interval genes,,,,,,"ENSG00000177144,ENSG00000132429,ENSG00000122367,ENSG00000290840",,,"NUDT4B,POPDC3,LDB3,XGY2",,,,,,,,https://github.com/opentargets/issues/issues/4261
+gh#4257 Fallopian tube cancer maps to colorectal cancer,,,,,,,"fallopian tube cancer,colorectal cancer,lung cancer,ovarian cancer",MONDO_0002158,,fallopian tube cancer,"EFO_1000251,MONDO_0005575,MONDO_0008170,MONDO_0008903,MONDO_0004992,EFO_0001071,EFO_0001075",,,,,,https://github.com/opentargets/issues/issues/4257
+gh#4251 URL state saving for widgets,,,,,ENSG00000169174,,,,,,,,,,,,https://github.com/opentargets/issues/issues/4251
+gh#4248 Pan UKBB credible sets LD matrix inconsistencies,,,,,,,,,,,,GCST90692406,,,,,https://github.com/opentargets/issues/issues/4248
+gh#4246 Association API export on target-centric pages,,,,,ENSG00000169174,,,,PCSK9,,,,,,,,https://github.com/opentargets/issues/issues/4246
+gh#4243 Bug with GCST IDs with underscore links,,,,,,,,,,,,GCST000292,,,,,https://github.com/opentargets/issues/issues/4243
+gh#4225 IBD/NOD2 ulcerative colitis evidence,,,,,ENSG00000167207,,"ulcerative colitis, inflammatory bowel disease",EFO_0000729,NOD2,ulcerative colitis,EFO_0003767,,,,,,https://github.com/opentargets/issues/issues/4225
+gh#4185 - AD synonym for atopic eczema,,,,,ENSG00000105835,,"Alzheimer's disease, atopic eczema",EFO_0000274,NAMPT,atopic eczema,"MONDO_0004975,EFO_0006514",,,,,,https://github.com/opentargets/issues/issues/4185
+gh#4182 ClinPGx safety widget link error,,,,,ENSG00000160211,,,,,,,,,,,,https://github.com/opentargets/issues/issues/4182
+gh#4178 Credible set annotation API sample query,,,,,,,,,,,,,,118db6d05cf67fe7668ee7bac1170fd3,,,https://github.com/opentargets/issues/issues/4178
+gh#4177 HPA baseline expression data missing,,,,,ENSG00000000003,,,,,,,,,,,,https://github.com/opentargets/issues/issues/4177
+gh#4167 Drop in drugs count due to old Drugbank reference,"CHEMBL1587228,CHEMBL1867342,CHEMBL478120",,,,,,,,,,,,,,,,https://github.com/opentargets/issues/issues/4167
+gh#4163 Searching for child molecule can lead to parent as top-hit,"CHEMBL2010601,CHEMBL4297603",,,,,,,,,,,,,,,,https://github.com/opentargets/issues/issues/4163
+gh#4162 Show link to EMA reference in Indications widget,CHEMBL1077,,,,,,,,,,,,,,,,https://github.com/opentargets/issues/issues/4162
+gh#4160 Excluding measurements from colocalisation table,,,,,ENSG00000140968,,"inflammatory bowel disease, systemic lupus erythematosus, multiple sclerosis",EFO_0003767,IRF8,inflammatory bowel disease,,,,,,a73ddcefa82363e9f8a9e7a68f0942af,https://github.com/opentargets/issues/issues/4160
+gh#4126 Creating PPP-specific documentation and queries for API,,,,,ENSG00000120210,,inflammatory bowel disease,MONDO_0005180,INSL6,Parkinson disease,,,"OTAR2057, OTAR2065",,,,https://github.com/opentargets/issues/issues/4126
+gh#4104 Relaxing disease identifier pattern in evidence schema,,,,,,,body height,OBA_VT0001253,,body height,,,,,,,https://github.com/opentargets/issues/issues/4104
+gh#4097 Bibliography component struggles to display some records,,,,,ENSG00000176884,"ENSG00000176884,ENSG00000169174,ENSG00000232810,ENSG00000180370,ENSG00000105397",,,"GRIN1,PCSK9,TNF,PAK2,TYK2",,,,,,,,https://github.com/opentargets/issues/issues/4097
+gh#4043 PPP table population issues,,,,,,,"inflammatory bowel disease, Crohn's disease, colorectal cancer",EFO_0003767,,inflammatory bowel disease,"EFO_0000384, EFO_0004142",,,,,,https://github.com/opentargets/issues/issues/4043
+gh#4040 GWAS Catalog study GCST90476229 credible sets,,"6_32591400_G_C, 6_30110553_C_T, 6_31379292_C_T",,,,,,,,,,GCST90476229,,,"2914a9437bdb318085f6cb96a926c57a, 216c00e7d142a1f8f33197f1b4c859cd, 1952d41bd4eae4a08030593ab14b21b3, b3a225343648b8382a583417699e2448",,https://github.com/opentargets/issues/issues/4040
+gh#3894 Variants with no phenotypic data,,"21_33554301_G_C,14_73961471_G_A,19_8976731_C_G",,,,,,,,,,,,,,,https://github.com/opentargets/issues/issues/3894
+gh#3622 LD index tag variants with strange IDs,,14_KI270846v1_alt_496715_C_A,,,,,,,,,,,,396d09cef37be9c225bc823e08318533,2b5037a1dd35a30114156238310b5ea2,,https://github.com/opentargets/issues/issues/3622
+gh#3457 Downweight inherited terms in target prioritisation,,,,,,"ENSG00000167207,ENSG00000232810,ENSG00000139618,ENSG00000141510","inflammatory bowel disease,ulcerative colitis,Crohn's disease,cancer,breast cancer",,"NOD2,TNF,BRCA2,TP53",,"EFO_0003767,EFO_0000729,EFO_0000384,MONDO_0004992,MONDO_0007254",,,,,,https://github.com/opentargets/issues/issues/3457
+gh#3450 ClinVar UniProt term inheritance,,,,,ENSG00000167207,,"ulcerative colitis,Crohn's disease,inflammatory bowel disease",EFO_0000729,NOD2,ulcerative colitis,"EFO_0003767,EFO_0000384,MONDO_0009960",,,,,,https://github.com/opentargets/issues/issues/3450
+gh#3426 Acute pancreatitis disease-phenotype mapping,,,,,,,acute pancreatitis,EFO_1000652,,acute pancreatitis,HP_0001735,,,,,,https://github.com/opentargets/issues/issues/3426
+gh#3416 TEP annotation parser data source update,,,,,ENSG00000095970,"ENSG00000115170,ENSG00000008086",,,"TREM2,ACVR1,CDKL5",,,,,,,,https://github.com/opentargets/issues/issues/3416
+gh#3413 post-COVID-19 disorder disease evidence mapping,,,,,,,post-COVID-19 disorder,MONDO_0100320,,post-COVID-19 disorder,,,,,,,https://github.com/opentargets/issues/issues/3413
+gh#3217 carbidopa ambiguous drug name mapping,"CHEMBL1200748,CHEMBL1201236",,,,,,,,,,,,,,,,https://github.com/opentargets/issues/issues/3217
+gh#2897 EBI Search dataset integration target-disease associations,,,,,"ENSG00000161533,ENSG00000038427","ENSG00000161533,ENSG00000038427","blood pressure,body fat percentage","EFO_0004325,EFO_0007800","ACOX1,VCAN",blood pressure,,,,,,,https://github.com/opentargets/issues/issues/2897
+gh#2548 disease location annotations missing in EFO,,,,,,,liver disease,EFO_0001421,,liver disease,,,,,,,https://github.com/opentargets/issues/issues/2548

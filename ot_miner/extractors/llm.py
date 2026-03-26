@@ -1,8 +1,9 @@
 """
-LLM-based entity enrichment and refinement using LangChain.
+LLM-based entity extraction using LangChain with OpenTargets API integration.
 
-Pass 2 of the two-pass miner: uses Claude API via LangChain to understand context,
-fill gaps that regex misses, and correct misclassifications.
+Uses Claude API via LangChain to extract entities from GitHub issues with full context
+(title, body, comments). The LLM has access to the OpenTargets GraphQL API to verify
+and look up gene IDs, disease IDs, drug IDs, and other entities in real-time.
 """
 
 import json
@@ -21,11 +22,16 @@ logger = logging.getLogger(__name__)
 
 class LLMExtractor(BaseExtractor):
     """
-    LLM-based extractor that enriches and refines regex extraction results.
+    LLM-based extractor with OpenTargets API integration.
     
-    Uses Claude API via LangChain to understand context, fill gaps, and correct
-    misclassifications that regex might miss (e.g., "BRAF target page"
-    → ENSG00000157764, or correctly classifying variants).
+    Uses Claude API via LangChain to extract entities from GitHub issues.
+    Reads full issue context (title, body, comments) and can query the
+    OpenTargets GraphQL API to verify and look up entity IDs in real-time.
+    
+    Examples:
+    - "BRAF target page" → queries API → returns ENSG00000157764
+    - "breast cancer" → queries API → returns EFO_0000305
+    - "imatinib" → queries API → returns CHEMBL941
     """
     
     def __init__(self, config: Optional[Config] = None):
@@ -60,12 +66,75 @@ class LLMExtractor(BaseExtractor):
                 api_key=config.anthropic_api_key,
                 temperature=0.7,
             )
+            
+            # Bind OpenTargets MCP tools if available
+            # The LLM can use these to look up page IDs, gene/disease mappings, etc.
+            try:
+                self.llm = self._bind_opentargets_tools(self.llm)
+            except Exception as e:
+                logger.warning(f"OpenTargets MCP tools not available: {e}")
+                logger.info("LLM will work without external tools (using built-in knowledge only)")
+            
             self.parser = JsonOutputParser(pydantic_object=ScenarioEntity)
         except ImportError as e:
             raise ImportError(
                 "langchain-anthropic package not found. "
                 "Install it with: pip install langchain-anthropic langchain-core"
             ) from e
+    
+    def _bind_opentargets_tools(self, llm):
+        """
+        Bind OpenTargets GraphQL API as a tool for the LLM.
+        
+        This allows the LLM to query the OpenTargets API directly to:
+        - Verify gene/target IDs
+        - Verify disease/phenotype IDs
+        - Verify drug/compound IDs
+        - Search for entities by name
+        
+        Args:
+            llm: ChatAnthropic instance
+        
+        Returns:
+            LLM with OpenTargets API tool bound
+        """
+        from langchain_core.tools import tool
+        import requests
+        
+        @tool
+        def query_opentargets_api(graphql_query: str) -> str:
+            """
+            Query the OpenTargets GraphQL API to look up or verify gene IDs, disease IDs, drug IDs, etc.
+            
+            Args:
+                graphql_query: A valid GraphQL query string for the OpenTargets API.
+                    Example: query { search(queryString:"BRAF", entityNames:["target"]) { hits { id name } } }
+            
+            Returns:
+                JSON response from the API as a string
+            """
+            api_url = "https://api.platform.opentargets.org/api/v4/graphql"
+            
+            try:
+                response = requests.post(
+                    api_url,
+                    json={"query": graphql_query},
+                    headers={"Content-Type": "application/json"},
+                    timeout=10,
+                )
+                response.raise_for_status()
+                result = response.json()
+                
+                # Return compact JSON
+                return json.dumps(result.get("data", result), indent=None)
+            except Exception as e:
+                return json.dumps({"error": str(e)})
+        
+        # Bind the tool to the LLM
+        llm_with_tools = llm.bind_tools([query_opentargets_api])
+        logger.info("✅ OpenTargets GraphQL API tool bound to LLM")
+        
+        return llm_with_tools
     
     def extract(self, issue: GitHubIssue) -> Optional[ScenarioMapping]:
         """
@@ -157,38 +226,85 @@ class LLMExtractor(BaseExtractor):
         for i, issue in enumerate(issues):
             regex_mapping = regex_mappings[i] if regex_mappings and i < len(regex_mappings) else None
             
+            # Format comments for LLM context
+            comments_text = ""
+            if issue.comments:
+                comments_summary = []
+                for comment in issue.comments[:10]:  # Limit to first 10 comments
+                    comment_preview = comment.body[:300]  # First 300 chars per comment
+                    comments_summary.append(f"[@{comment.user}]: {comment_preview}")
+                comments_text = "\n".join(comments_summary)
+            
             payload = {
                 "issue_number": issue.number,
                 "title": issue.title,
-                "body": (issue.body or "")[:1500],  # Truncate to avoid huge prompts
+                "body": (issue.body or "")[:3000],  # Increased to 3000 for more context
+                "comments": comments_text,
                 "labels": [label.name for label in issue.labels],
-                "regex_extracted": {
-                    "drug_id": regex_mapping.drug_id if regex_mapping else "",
-                    "variant_id": regex_mapping.variant_id if regex_mapping else "",
-                    "variant_pgx": regex_mapping.variant_pgx if regex_mapping else "",
-                    "variant_molqtl": regex_mapping.variant_molqtl if regex_mapping else "",
-                    "target_id": regex_mapping.target_id if regex_mapping else "",
-                    "target_ids": regex_mapping.target_ids if regex_mapping else "",
-                    "disease_id": regex_mapping.disease_id if regex_mapping else "",
-                    "gwas_study": regex_mapping.gwas_study if regex_mapping else "",
-                    "qtl_study": regex_mapping.qtl_study if regex_mapping else "",
-                    "credible_set_l2g": regex_mapping.credible_set_l2g if regex_mapping else "",
-                    "credible_set_gwas": regex_mapping.credible_set_gwas if regex_mapping else "",
-                    "credible_set_qtl": regex_mapping.credible_set_qtl if regex_mapping else "",
-                } if regex_mapping else {},
                 "source_url": issue.html_url,
             }
             payloads.append(payload)
         
-        # Call LLM via LangChain
+        # Call LLM via LangChain with tool support
         user_message = f"Extract and map entities for these {len(issues)} GitHub issues.\n\n{json.dumps(payloads, indent=2)}"
         
         try:
-            response = self.llm.invoke([
+            # Agent loop to handle tool calls
+            messages = [
                 ("system", LLM_SYSTEM_PROMPT),
                 ("human", user_message),
-            ])
-            response_text = response.content
+            ]
+            
+            max_iterations = 10  # Prevent infinite loops
+            for iteration in range(max_iterations):
+                response = self.llm.invoke(messages)
+                
+                # Check if LLM wants to call tools
+                if hasattr(response, 'tool_calls') and response.tool_calls:
+                    logger.debug(f"LLM making {len(response.tool_calls)} tool call(s)")
+                    
+                    # Add LLM response to messages (AIMessage object directly, not tuple)
+                    messages.append(response)
+                    
+                    # Execute tool calls
+                    from langchain_core.messages import ToolMessage
+                    for tool_call in response.tool_calls:
+                        tool_name = tool_call.get("name", "")
+                        tool_args = tool_call.get("args", {})
+                        tool_id = tool_call.get("id", "")
+                        
+                        logger.debug(f"Calling tool: {tool_name}")
+                        
+                        # Execute the tool (query_opentargets_api)
+                        if tool_name == "query_opentargets_api":
+                            import requests
+                            api_url = "https://api.platform.opentargets.org/api/v4/graphql"
+                            graphql_query = tool_args.get("graphql_query", "")
+                            
+                            try:
+                                api_response = requests.post(
+                                    api_url,
+                                    json={"query": graphql_query},
+                                    headers={"Content-Type": "application/json"},
+                                    timeout=10,
+                                )
+                                api_response.raise_for_status()
+                                result = api_response.json()
+                                tool_result = json.dumps(result.get("data", result), indent=None)
+                            except Exception as e:
+                                tool_result = json.dumps({"error": str(e)})
+                            
+                            # Add tool result to messages
+                            messages.append(ToolMessage(content=tool_result, tool_call_id=tool_id))
+                    
+                    # Continue loop to get LLM's next response
+                    continue
+                
+                # No more tool calls, parse final response
+                response_text = response.content
+                break
+            else:
+                raise ValueError("LLM exceeded maximum tool call iterations")
             
             # Parse JSON response
             try:
@@ -214,62 +330,39 @@ class LLMExtractor(BaseExtractor):
         if not isinstance(llm_results, list):
             llm_results = [llm_results]
         
-        # Merge LLM results with regex baseline
+        # Convert LLM results to ScenarioMappings
         results = []
         for i, llm_result in enumerate(llm_results):
             if i >= len(issues):
                 break
             
-            regex_mapping = regex_mappings[i] if regex_mappings and i < len(regex_mappings) else None
+            issue = issues[i]
             
             # Ensure llm_result is a dict
             if isinstance(llm_result, ScenarioEntity):
                 llm_result = llm_result.model_dump()
             
-            # Build merged mapping
-            if regex_mapping:
-                mapping = ScenarioMapping(
-                    scenario_name=regex_mapping.scenario_name,  # Keep formatted name
-                    source_url=regex_mapping.source_url,
-                    drug_id=merge_extraction_fields(llm_result.get("drug_id"), regex_mapping.drug_id),
-                    variant_id=merge_extraction_fields(llm_result.get("variant_id"), regex_mapping.variant_id),
-                    variant_pgx=merge_extraction_fields(llm_result.get("variant_pgx"), regex_mapping.variant_pgx),
-                    variant_molqtl=merge_extraction_fields(llm_result.get("variant_molqtl"), regex_mapping.variant_molqtl),
-                    target_id=merge_extraction_fields(llm_result.get("target_id"), regex_mapping.target_id),
-                    target_ids=merge_extraction_fields(llm_result.get("target_ids"), regex_mapping.target_ids),
-                    aotf_diseases=merge_extraction_fields(llm_result.get("aotf_diseases"), regex_mapping.aotf_diseases),
-                    disease_id=merge_extraction_fields(llm_result.get("disease_id"), regex_mapping.disease_id),
-                    aotf_genes=merge_extraction_fields(llm_result.get("aotf_genes"), regex_mapping.aotf_genes),
-                    disease_search=merge_extraction_fields(llm_result.get("disease_search"), regex_mapping.disease_search),
-                    disease_alt=merge_extraction_fields(llm_result.get("disease_alt"), regex_mapping.disease_alt),
-                    gwas_study=merge_extraction_fields(llm_result.get("gwas_study"), regex_mapping.gwas_study),
-                    qtl_study=merge_extraction_fields(llm_result.get("qtl_study"), regex_mapping.qtl_study),
-                    credible_set_l2g=merge_extraction_fields(llm_result.get("credible_set_l2g"), regex_mapping.credible_set_l2g),
-                    credible_set_gwas=merge_extraction_fields(llm_result.get("credible_set_gwas"), regex_mapping.credible_set_gwas),
-                    credible_set_qtl=merge_extraction_fields(llm_result.get("credible_set_qtl"), regex_mapping.credible_set_qtl),
-                )
-            else:
-                # Create mapping from LLM result alone
-                mapping = ScenarioMapping(
-                    scenario_name=llm_result.get("scenario_name", ""),
-                    source_url=llm_result.get("source_url", ""),
-                    drug_id=llm_result.get("drug_id", ""),
-                    variant_id=llm_result.get("variant_id", ""),
-                    variant_pgx=llm_result.get("variant_pgx", ""),
-                    variant_molqtl=llm_result.get("variant_molqtl", ""),
-                    target_id=llm_result.get("target_id", ""),
-                    target_ids=llm_result.get("target_ids", ""),
-                    aotf_diseases=llm_result.get("aotf_diseases", ""),
-                    disease_id=llm_result.get("disease_id", ""),
-                    aotf_genes=llm_result.get("aotf_genes", ""),
-                    disease_search=llm_result.get("disease_search", ""),
-                    disease_alt=llm_result.get("disease_alt", ""),
-                    gwas_study=llm_result.get("gwas_study", ""),
-                    qtl_study=llm_result.get("qtl_study", ""),
-                    credible_set_l2g=llm_result.get("credible_set_l2g", ""),
-                    credible_set_gwas=llm_result.get("credible_set_gwas", ""),
-                    credible_set_qtl=llm_result.get("credible_set_qtl", ""),
-                )
+            # Create mapping from LLM result (LLM is now the source of truth)
+            mapping = ScenarioMapping(
+                scenario_name=llm_result.get("scenario_name", f"gh#{issue.number}: {issue.title[:50]}"),
+                source_url=llm_result.get("source_url", issue.html_url),
+                drug_id=llm_result.get("drug_id", ""),
+                variant_id=llm_result.get("variant_id", ""),
+                variant_pgx=llm_result.get("variant_pgx", ""),
+                variant_molqtl=llm_result.get("variant_molqtl", ""),
+                target_id=llm_result.get("target_id", ""),
+                target_ids=llm_result.get("target_ids", ""),
+                aotf_diseases=llm_result.get("aotf_diseases", ""),
+                disease_id=llm_result.get("disease_id", ""),
+                aotf_genes=llm_result.get("aotf_genes", ""),
+                disease_search=llm_result.get("disease_search", ""),
+                disease_alt=llm_result.get("disease_alt", ""),
+                gwas_study=llm_result.get("gwas_study", ""),
+                qtl_study=llm_result.get("qtl_study", ""),
+                credible_set_l2g=llm_result.get("credible_set_l2g", ""),
+                credible_set_gwas=llm_result.get("credible_set_gwas", ""),
+                credible_set_qtl=llm_result.get("credible_set_qtl", ""),
+            )
             
             results.append(ExtractionResult(
                 mapping=mapping,
